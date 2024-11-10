@@ -1,0 +1,55 @@
+# Byte-compiled files
+__pycache__/
+*.py[cod]
+
+# Virtual Environment
+venv/
+.env
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Flask specific files
+instance/
+*.sqlite3
+
+# Log files
+logs/
+*.log
+
+# Test output
+coverage.xml
+coverage-service.xml
+*.cover
+*.py,cover
+.coverage
+
+# IDE and editor specific files
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Distribution files
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Other files
+*.DS_Store
+*.db
+*.pkl
+*.pid
+*.lock
+
+
+# Configuration files
+*.json
+*.yml
+*.yaml
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
