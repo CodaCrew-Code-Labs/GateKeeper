@@ -24,7 +24,7 @@ vi.mock('../src/jwks-cache.js', () => ({
 }));
 
 vi.mock('jwks-rsa', () => ({
-  default: () => mockJwksClient,
+  default: (): typeof mockJwksClient => mockJwksClient,
 }));
 
 // Now import the module under test after mocking its dependencies
