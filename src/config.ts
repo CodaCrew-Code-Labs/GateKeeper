@@ -41,7 +41,7 @@ export function validateCognitoConfig(config: unknown): CognitoConfig {
   } catch (error) {
     if (error instanceof z.ZodError) {
       // Transform Zod errors into more user-friendly messages
-      const errorMessages = error.errors
+      const errorMessages = error.issues
         .map(err => {
           const path = err.path.join('.');
           return `${path}: ${err.message}`;
