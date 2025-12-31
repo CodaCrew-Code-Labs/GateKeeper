@@ -2,6 +2,7 @@
 // This example shows complete integration with authentication flows and middleware
 
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 // Import the authentication package
@@ -14,6 +15,13 @@ const port = process.env.PORT || 3000;
 
 // Middleware for parsing JSON bodies
 app.use(express.json());
+
+// Rate limiting middleware
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP to 100 requests per windowMs
+});
+app.use(limiter);
 
 // Initialize the Cognito Auth Manager
 let authManager;
