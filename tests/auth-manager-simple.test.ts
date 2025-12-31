@@ -3,9 +3,9 @@ import { CognitoAuthManager } from '../src/auth-manager.js';
 import { CognitoConfig } from '../src/types.js';
 
 vi.mock('@aws-sdk/client-cognito-identity-provider', () => ({
-  CognitoIdentityProviderClient: vi.fn().mockImplementation(() => ({
-    send: vi.fn(),
-  })),
+  CognitoIdentityProviderClient: class {
+    send = vi.fn();
+  },
   SignUpCommand: vi.fn(),
   ConfirmSignUpCommand: vi.fn(),
   InitiateAuthCommand: vi.fn(),
@@ -15,18 +15,10 @@ vi.mock('@aws-sdk/client-cognito-identity-provider', () => ({
 }));
 
 describe('CognitoAuthManager Simple Tests', () => {
-  let mockClient: unknown;
   let validConfig: CognitoConfig;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
-
-    const { CognitoIdentityProviderClient } =
-      await import('@aws-sdk/client-cognito-identity-provider');
-    mockClient = {
-      send: vi.fn(),
-    };
-    (CognitoIdentityProviderClient as unknown).mockImplementation(() => mockClient);
 
     validConfig = {
       userPoolId: 'us-east-1_abcdef123',
@@ -37,11 +29,13 @@ describe('CognitoAuthManager Simple Tests', () => {
   });
 
   it('should return userSub for valid signup', async () => {
-    mockClient.send.mockResolvedValueOnce({
+    const authManager = new CognitoAuthManager(validConfig);
+
+    // Mock the send method on the instance
+    vi.spyOn(authManager['cognitoClient'], 'send').mockResolvedValueOnce({
       UserSub: 'test-user-sub',
     });
 
-    const authManager = new CognitoAuthManager(validConfig);
     const result = await authManager.signup('test@example.com', 'password123');
 
     expect(result).toHaveProperty('userSub');
@@ -49,7 +43,10 @@ describe('CognitoAuthManager Simple Tests', () => {
   });
 
   it('should return tokens for valid login', async () => {
-    mockClient.send.mockResolvedValueOnce({
+    const authManager = new CognitoAuthManager(validConfig);
+
+    // Mock the send method on the instance
+    vi.spyOn(authManager['cognitoClient'], 'send').mockResolvedValueOnce({
       AuthenticationResult: {
         IdToken: 'id-token',
         AccessToken: 'access-token',
@@ -57,7 +54,6 @@ describe('CognitoAuthManager Simple Tests', () => {
       },
     });
 
-    const authManager = new CognitoAuthManager(validConfig);
     const result = await authManager.login('test@example.com', 'password123');
 
     expect(result.idToken).toBe('id-token');

@@ -39,7 +39,7 @@ export class CognitoAuthError extends Error {
       message: this.message,
       code: this.code,
       statusCode: this.statusCode,
-      stack: this.stack,
+      ...(this.stack !== undefined && { stack: this.stack }),
     };
   }
 }

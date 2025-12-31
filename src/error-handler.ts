@@ -140,24 +140,14 @@ export class ErrorHandler {
   } {
     // Handle CognitoAuthError instances
     if (error instanceof CognitoAuthError) {
-      const result: {
-        name: string;
-        message: string;
-        code: string;
-        statusCode: number;
-        stack?: string;
-        originalError: unknown;
-      } = {
+      return {
         name: error.name,
         message: error.message,
         code: error.code,
         statusCode: error.statusCode,
+        ...(error.stack !== undefined && { stack: error.stack }),
         originalError: error,
       };
-      if (error.stack !== undefined) {
-        result.stack = error.stack;
-      }
-      return result;
     }
 
     // Handle AWS SDK errors
@@ -168,24 +158,14 @@ export class ErrorHandler {
 
     // Handle standard JavaScript errors
     if (error instanceof Error) {
-      const result: {
-        name: string;
-        message: string;
-        code: string;
-        statusCode: number;
-        stack?: string;
-        originalError: unknown;
-      } = {
+      return {
         name: error.name,
         message: error.message,
         code: ErrorCodes.INTERNAL_ERROR || 'INTERNAL_ERROR',
         statusCode: 500,
+        ...(error.stack !== undefined && { stack: error.stack }),
         originalError: error,
       };
-      if (error.stack !== undefined) {
-        result.stack = error.stack;
-      }
-      return result;
     }
 
     // Handle unknown error types
@@ -324,14 +304,12 @@ export class ErrorHandler {
       message: processedError.message,
       code: processedError.code,
       statusCode: processedError.statusCode,
-      stack: processedError.stack,
+      ...(processedError.stack !== undefined && { stack: processedError.stack }),
       originalError: this.sanitizeForLogging(processedError.originalError),
       context: this.sanitizeForLogging(context),
       timestamp: timestamp || new Date().toISOString(),
+      ...(requestId !== undefined && { requestId }),
     };
-    if (requestId !== undefined) {
-      logEntry.requestId = requestId;
-    }
 
     // Log at appropriate level based on status code
     if (processedError.statusCode >= 500) {
@@ -380,10 +358,8 @@ export class ErrorHandler {
       error: generic?.error || 'Internal Server Error',
       message: generic?.message || 'An unexpected error occurred',
       timestamp,
+      ...(requestId !== undefined && { requestId }),
     };
-    if (requestId !== undefined) {
-      response.requestId = requestId;
-    }
 
     // Include additional details in development mode
     if (this.config.includeDetails) {
@@ -433,10 +409,10 @@ export class ErrorHandler {
 
       // Redact sensitive keys
       if (sensitiveKeys.some(sensitive => lowerKey.includes(sensitive))) {
-        sanitized[key] = '[REDACTED]';
+        (sanitized as Record<string, unknown>)[key] = '[REDACTED]';
       } else if (value && typeof value === 'object') {
         // Recursively sanitize nested objects
-        sanitized[key] = this.sanitizeForLogging(value);
+        (sanitized as Record<string, unknown>)[key] = this.sanitizeForLogging(value);
       }
     }
 

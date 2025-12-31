@@ -18,11 +18,13 @@ const mockJwksClient = {
 
 // Mock modules before importing the module under test
 vi.mock('../src/jwks-cache.js', () => ({
-  JWKSCache: vi.fn(() => mockJwksCache),
+  JWKSCache: class {
+    getKeys = mockJwksCache.getKeys;
+  } as new () => { getKeys: typeof mockJwksCache.getKeys },
 }));
 
 vi.mock('jwks-rsa', () => ({
-  default: vi.fn(() => mockJwksClient),
+  default: () => mockJwksClient,
 }));
 
 // Now import the module under test after mocking its dependencies

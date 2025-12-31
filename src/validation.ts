@@ -328,7 +328,7 @@ export function validateAuthorizationHeader(header: unknown): string | null {
  * Sanitize object for logging (remove sensitive data)
  * Requirements: 6.5
  */
-export function sanitizeForLogging(obj: unknown): Record<string, unknown> {
+export function sanitizeForLogging(obj: unknown): unknown {
   if (obj === null || obj === undefined) {
     return obj;
   }

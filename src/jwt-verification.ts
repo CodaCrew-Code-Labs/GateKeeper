@@ -97,7 +97,14 @@ export class JWTVerifier {
       const keys = await this.jwksCache.getKeys(this.config.region, this.config.userPoolId);
 
       // Find the key with matching kid
-      const key = keys.find(k => k.kid === validatedKid);
+      const key = keys.find((k: unknown): k is { kid: string } => {
+        return (
+          typeof k === 'object' &&
+          k !== null &&
+          'kid' in k &&
+          (k as { kid: unknown }).kid === validatedKid
+        );
+      });
       if (!key) {
         throw new InvalidTokenError('Signing key not found', 'SIGNING_KEY_NOT_FOUND');
       }
@@ -146,7 +153,7 @@ export class JWTVerifier {
 
     return {
       sub: claims.sub,
-      email: claims.email,
+      email: claims.email || '',
       customClaims,
     };
   }
@@ -347,7 +354,7 @@ export async function extractTenantId(
   // Validate input
   const validatedToken = validateJWTToken(token);
 
-  return getCustomClaim(validatedToken, 'tenantId', config);
+  return getCustomClaim(validatedToken, 'tenantId', config) as Promise<string | undefined>;
 }
 
 /**
@@ -363,5 +370,5 @@ export async function extractUserRole(
   // Validate input
   const validatedToken = validateJWTToken(token);
 
-  return getCustomClaim(validatedToken, 'role', config);
+  return getCustomClaim(validatedToken, 'role', config) as Promise<string | undefined>;
 }

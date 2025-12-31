@@ -12,9 +12,9 @@ global.fetch = mockFetch;
 
 // Mock AWS SDK
 vi.mock('@aws-sdk/client-cognito-identity-provider', () => ({
-  CognitoIdentityProviderClient: vi.fn(() => ({
-    send: vi.fn(),
-  })),
+  CognitoIdentityProviderClient: class {
+    send = vi.fn();
+  },
   SignUpCommand: vi.fn(),
   ConfirmSignUpCommand: vi.fn(),
   InitiateAuthCommand: vi.fn(),

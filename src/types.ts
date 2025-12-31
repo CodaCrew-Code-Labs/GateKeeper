@@ -62,7 +62,7 @@ export interface JWTClaims {
   /** User identifier */
   sub: string;
   /** User email */
-  email: string;
+  email?: string;
   /** Token issuer (Cognito endpoint) */
   iss: string;
   /** Token audience (Client ID) */

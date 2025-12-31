@@ -31,14 +31,10 @@
     "build:esm": "tsc --module esnext --outDir dist/esm --removeComments",
     "clean": "rimraf dist",
     "dev": "tsc --watch",
-    "dev:setup": "chmod +x scripts/dev-setup.sh && ./scripts/dev-setup.sh",
     "dev:stop": "chmod +x scripts/dev-stop.sh && ./scripts/dev-stop.sh",
-    "dev:clean": "chmod +x scripts/dev-stop.sh && ./scripts/dev-stop.sh --clean",
     "test": "vitest --run",
     "test:watch": "vitest",
     "test:coverage": "vitest --coverage --run",
-    "test:localstack": "RUN_LOCALSTACK_TESTS=true vitest --run tests/localstack-integration.test.ts",
-    "test:localstack:watch": "RUN_LOCALSTACK_TESTS=true vitest tests/localstack-integration.test.ts",
     "lint": "eslint src tests --ext .ts",
     "lint:fix": "eslint src tests --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
@@ -81,7 +77,7 @@
     "@types/node": "^20.0.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
-    "@vitest/coverage-v8": "^1.0.0",
+    "@vitest/coverage-v8": "^4.0.16",
     "eslint": "^8.0.0",
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-prettier": "^5.0.0",
@@ -89,7 +85,7 @@
     "prettier": "^3.0.0",
     "rimraf": "^5.0.0",
     "typescript": "^5.3.0",
-    "vitest": "^1.0.0"
+    "vitest": "^4.0.16"
   },
   "peerDependencies": {
     "express": "^4.18.0"

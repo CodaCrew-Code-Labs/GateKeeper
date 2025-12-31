@@ -56,8 +56,12 @@ export const DEFAULT_RETRY_CONFIG: Required<RetryConfig> = {
       }
 
       // Check HTTP status codes in metadata
-      if (awsError.$metadata?.httpStatusCode) {
-        const statusCode = awsError.$metadata.httpStatusCode;
+      if (
+        awsError.$metadata &&
+        typeof awsError.$metadata === 'object' &&
+        'httpStatusCode' in awsError.$metadata
+      ) {
+        const statusCode = (awsError.$metadata as { httpStatusCode: number }).httpStatusCode;
         return statusCode >= 500 || statusCode === 429; // 5xx or rate limiting
       }
     }
@@ -245,8 +249,15 @@ export class RetryHandler {
 
     const networkError = new NetworkError(message, ErrorCodes.NETWORK_ERROR);
 
-    (networkError as { originalError: unknown }).originalError = error;
-    (networkError as { retryStats: RetryStats | undefined }).retryStats = stats;
+    // Add additional properties using type assertion
+    (
+      networkError as NetworkError & { originalError: unknown; retryStats?: RetryStats }
+    ).originalError = error;
+    if (stats) {
+      (
+        networkError as NetworkError & { originalError: unknown; retryStats?: RetryStats }
+      ).retryStats = stats;
+    }
 
     return networkError;
   }
