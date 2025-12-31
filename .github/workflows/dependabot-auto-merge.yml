@@ -1,0 +1,39 @@
+name: Dependabot Auto-merge
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    name: Auto-merge Dependabot PRs
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Auto-merge minor and patch updates
+        uses: pascalgn/merge-action@v0.15.6
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          merge_method: squash
+        env:
+          MERGE_LABELS: dependencies
+          MERGE_DELETE_BRANCH: true

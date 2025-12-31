@@ -1,0 +1,98 @@
+{
+  "name": "@gateway/cognito-auth",
+  "version": "1.0.0",
+  "description": "Production-ready AWS Cognito authentication package for Node.js/Express applications",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/types/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/types/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "npm run clean && npm run build:types && npm run build:cjs && npm run build:esm",
+    "build:types": "tsc --emitDeclarationOnly --outDir dist/types",
+    "build:cjs": "tsc --module commonjs --outDir dist/cjs --removeComments",
+    "build:esm": "tsc --module esnext --outDir dist/esm --removeComments",
+    "clean": "rimraf dist",
+    "dev": "tsc --watch",
+    "dev:setup": "chmod +x scripts/dev-setup.sh && ./scripts/dev-setup.sh",
+    "dev:stop": "chmod +x scripts/dev-stop.sh && ./scripts/dev-stop.sh",
+    "dev:clean": "chmod +x scripts/dev-stop.sh && ./scripts/dev-stop.sh --clean",
+    "test": "vitest --run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest --coverage --run",
+    "test:localstack": "RUN_LOCALSTACK_TESTS=true vitest --run tests/localstack-integration.test.ts",
+    "test:localstack:watch": "RUN_LOCALSTACK_TESTS=true vitest tests/localstack-integration.test.ts",
+    "lint": "eslint src tests --ext .ts",
+    "lint:fix": "eslint src tests --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "prepublishOnly": "npm run build && npm test",
+    "example": "cd example && npm start"
+  },
+  "keywords": [
+    "aws",
+    "cognito",
+    "authentication",
+    "jwt",
+    "express",
+    "middleware",
+    "typescript",
+    "multi-tenant"
+  ],
+  "author": "Gateway Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gateway/cognito-auth.git"
+  },
+  "bugs": {
+    "url": "https://github.com/gateway/cognito-auth/issues"
+  },
+  "homepage": "https://github.com/gateway/cognito-auth#readme",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.0.0",
+    "jsonwebtoken": "^9.0.0",
+    "jwks-rsa": "^3.0.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.0",
+    "@types/jsonwebtoken": "^9.0.0",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "@vitest/coverage-v8": "^1.0.0",
+    "eslint": "^8.0.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "fast-check": "^3.15.0",
+    "prettier": "^3.0.0",
+    "rimraf": "^5.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  },
+  "peerDependencies": {
+    "express": "^4.18.0"
+  },
+  "sideEffects": false
+}
