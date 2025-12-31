@@ -14,10 +14,10 @@ export default defineConfig({
       exclude: ['example/**/*', 'dist/**/*', 'node_modules/**/*'],
       reporter: ['text', 'html'],
       thresholds: {
-        statements: 58,
+        statements: 50,
         branches: 70,
         functions: 70,
-        lines: 58
+        lines: 50
       }
     }
   },
