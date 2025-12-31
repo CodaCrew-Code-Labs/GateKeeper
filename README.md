@@ -1,6 +1,6 @@
 # @gateway/cognito-auth
 
-[![npm version](https://badge.fury.io/js/@gateway%2Fcognito-auth.svg)](https://badge.fury.io/js/@gateway%2Fcognito-auth)
+[![npm version](https://badge.fury.io/js/gateway-cognito-auth.svg)](https://badge.fury.io/js/@gateway%2Fcognito-auth)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)](https://nodejs.org/)
 
