@@ -4,7 +4,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { CognitoAuthManager } from '../src/auth-manager.js';
 import { JWKSCache } from '../src/jwks-cache.js';
-import { NetworkError } from '../src/errors.js';
 
 // Mock fetch for JWKS cache testing
 const mockFetch = vi.fn();
