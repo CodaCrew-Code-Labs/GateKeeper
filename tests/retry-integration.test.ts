@@ -38,15 +38,6 @@ describe('Network Retry Integration Tests', () => {
     });
 
     jwksCache = new JWKSCache();
-    // Configure faster retry settings for testing
-    (
-      jwksCache as { retryHandler: { updateConfig: (config: unknown) => void } }
-    ).retryHandler.updateConfig({
-      maxAttempts: 3,
-      baseDelay: 10, // 10ms instead of 1000ms
-      maxDelay: 50, // 50ms instead of 5000ms
-      requestTimeout: 1000, // 1s instead of 10s
-    });
   });
 
   afterEach(() => {
