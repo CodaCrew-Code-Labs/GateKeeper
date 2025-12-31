@@ -21,6 +21,7 @@ export function computeSecretHash(
   clientSecret: string
 ): string {
   const message = username + clientId;
+  // lgtm[js/insufficient-password-hash] This is AWS Cognito's required secret hash format, not password hashing
   const hash = createHmac('sha256', clientSecret).update(message).digest('base64');
   return hash;
 }
