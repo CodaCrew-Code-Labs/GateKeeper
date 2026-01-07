@@ -11,13 +11,15 @@ import {
 import { CognitoConfig, AuthMiddlewareOptions, AuthenticatedRequest } from '../src/types.js';
 
 // Mock jwt-verification module
+const mockVerifyToken = vi.fn().mockResolvedValue({
+  sub: 'user-123',
+  email: 'test@example.com',
+  customClaims: {},
+});
+
 vi.mock('../src/jwt-verification.js', () => ({
   JWTVerifier: vi.fn().mockImplementation(() => ({
-    verifyToken: vi.fn().mockResolvedValue({
-      sub: 'user-123',
-      email: 'test@example.com',
-      customClaims: {},
-    }),
+    verifyToken: mockVerifyToken,
   })),
 }));
 
@@ -151,6 +153,11 @@ describe('createAuthMiddleware', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockVerifyToken.mockResolvedValue({
+      sub: 'user-123',
+      email: 'test@example.com',
+      customClaims: {},
+    });
 
     mockConfig = {
       userPoolId: 'us-east-1_test123',
