@@ -202,6 +202,7 @@ export class ErrorHandler {
       case 'NotAuthorizedException':
       case 'InvalidPasswordException':
       case 'UserNotFoundException':
+      case 'UsernameExistsException':
         return {
           name: errorName,
           message: errorMessage,

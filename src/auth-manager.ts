@@ -16,6 +16,7 @@ import {
   ConfigurationError,
   AuthenticationError,
   ValidationError,
+  NetworkError,
 } from './errors.js';
 import {
   validateEmail,
@@ -154,15 +155,30 @@ export class CognitoAuthManager {
 
       return result.result;
     } catch (error) {
-      // Use error handler for production-safe error processing
-      this.errorHandler.handleError(error, {
-        operation: 'signup',
-        email: validatedEmail, // Will be sanitized in logs
-      });
-
       // Re-throw with appropriate error type based on the processed error
       if (error instanceof CognitoAuthError) {
         throw error;
+      }
+
+      // Handle NetworkError that wraps AWS errors from retry handler
+      if (error instanceof NetworkError && (error as any).originalError) {
+        const originalError = (error as any).originalError;
+        if (originalError && typeof originalError === 'object' && 'name' in originalError) {
+          const awsError = originalError as { name: string; message?: string };
+          switch (awsError.name) {
+            case 'UsernameExistsException':
+              throw new AuthenticationError('User already exists', 'USER_EXISTS');
+            case 'InvalidPasswordException':
+              throw new ValidationError('Password does not meet requirements', 'INVALID_PASSWORD');
+            case 'InvalidParameterException':
+              throw new ValidationError('Invalid parameters provided', 'INVALID_PARAMETERS');
+            case 'TooManyRequestsException':
+              throw new AuthenticationError(
+                'Too many requests, please try again later',
+                'TOO_MANY_REQUESTS'
+              );
+          }
+        }
       }
 
       // Handle AWS SDK errors with enhanced error mapping
@@ -185,6 +201,12 @@ export class CognitoAuthManager {
             throw new AuthenticationError('Signup failed due to service error', 'SIGNUP_FAILED');
         }
       }
+
+      // Use error handler for production-safe error processing only for unexpected errors
+      this.errorHandler.handleError(error, {
+        operation: 'signup',
+        email: validatedEmail, // Will be sanitized in logs
+      });
 
       throw new AuthenticationError('Signup failed due to unexpected error', 'SIGNUP_FAILED');
     }
@@ -251,16 +273,30 @@ export class CognitoAuthManager {
 
       return result.result;
     } catch (error) {
-      // Use error handler for production-safe error processing
-      this.errorHandler.handleError(error, {
-        operation: 'signupWithUsername',
-        username: validatedUsername,
-        email: validatedEmail, // Will be sanitized in logs
-      });
-
       // Re-throw with appropriate error type based on the processed error
       if (error instanceof CognitoAuthError) {
         throw error;
+      }
+
+      // Handle NetworkError that wraps AWS errors from retry handler
+      if (error instanceof NetworkError && (error as any).originalError) {
+        const originalError = (error as any).originalError;
+        if (originalError && typeof originalError === 'object' && 'name' in originalError) {
+          const awsError = originalError as { name: string; message?: string };
+          switch (awsError.name) {
+            case 'UsernameExistsException':
+              throw new AuthenticationError('User already exists', 'USER_EXISTS');
+            case 'InvalidPasswordException':
+              throw new ValidationError('Password does not meet requirements', 'INVALID_PASSWORD');
+            case 'InvalidParameterException':
+              throw new ValidationError('Invalid parameters provided', 'INVALID_PARAMETERS');
+            case 'TooManyRequestsException':
+              throw new AuthenticationError(
+                'Too many requests, please try again later',
+                'TOO_MANY_REQUESTS'
+              );
+          }
+        }
       }
 
       // Handle AWS SDK errors with enhanced error mapping
@@ -283,6 +319,13 @@ export class CognitoAuthManager {
             throw new AuthenticationError('Signup failed due to service error', 'SIGNUP_FAILED');
         }
       }
+
+      // Use error handler for production-safe error processing only for unexpected errors
+      this.errorHandler.handleError(error, {
+        operation: 'signupWithUsername',
+        username: validatedUsername,
+        email: validatedEmail, // Will be sanitized in logs
+      });
 
       throw new AuthenticationError('Signup failed due to unexpected error', 'SIGNUP_FAILED');
     }
@@ -319,14 +362,34 @@ export class CognitoAuthManager {
         await this.cognitoClient.send(command);
       }, 'confirm signup operation');
     } catch (error) {
-      // Use error handler for production-safe error processing
-      this.errorHandler.handleError(error, {
-        operation: 'confirmSignup',
-        username: validatedUsername, // Will be sanitized in logs
-      });
-
+      // Re-throw with appropriate error type based on the processed error
       if (error instanceof CognitoAuthError) {
         throw error;
+      }
+
+      // Handle NetworkError that wraps AWS errors from retry handler
+      if (error instanceof NetworkError && (error as any).originalError) {
+        const originalError = (error as any).originalError;
+        if (originalError && typeof originalError === 'object' && 'name' in originalError) {
+          const awsError = originalError as { name: string; message?: string };
+          switch (awsError.name) {
+            case 'CodeMismatchException':
+              throw new AuthenticationError('Invalid verification code', 'INVALID_CODE');
+            case 'ExpiredCodeException':
+              throw new AuthenticationError('Verification code has expired', 'CODE_EXPIRED');
+            case 'UserNotFoundException':
+              throw new AuthenticationError('User not found', 'USER_NOT_FOUND');
+            case 'NotAuthorizedException':
+              throw new AuthenticationError('User is already confirmed', 'USER_ALREADY_CONFIRMED');
+            case 'TooManyFailedAttemptsException':
+              throw new AuthenticationError('Too many failed attempts', 'TOO_MANY_ATTEMPTS');
+            case 'TooManyRequestsException':
+              throw new AuthenticationError(
+                'Too many requests, please try again later',
+                'TOO_MANY_REQUESTS'
+              );
+          }
+        }
       }
 
       // Handle AWS SDK errors with enhanced error mapping
@@ -356,6 +419,12 @@ export class CognitoAuthManager {
             );
         }
       }
+
+      // Use error handler for production-safe error processing only for unexpected errors
+      this.errorHandler.handleError(error, {
+        operation: 'confirmSignup',
+        username: validatedUsername, // Will be sanitized in logs
+      });
 
       throw new AuthenticationError(
         'Confirmation failed due to unexpected error',
@@ -423,14 +492,34 @@ export class CognitoAuthManager {
 
       return result.result;
     } catch (error) {
-      // Use error handler for production-safe error processing
-      this.errorHandler.handleError(error, {
-        operation: 'login',
-        email: validatedEmail, // Will be sanitized in logs
-      });
-
+      // Re-throw with appropriate error type based on the processed error
       if (error instanceof CognitoAuthError) {
         throw error;
+      }
+
+      // Handle NetworkError that wraps AWS errors from retry handler
+      if (error instanceof NetworkError && (error as any).originalError) {
+        const originalError = (error as any).originalError;
+        if (originalError && typeof originalError === 'object' && 'name' in originalError) {
+          const awsError = originalError as { name: string; message?: string };
+          switch (awsError.name) {
+            case 'NotAuthorizedException':
+              throw new AuthenticationError('Invalid email or password', 'INVALID_CREDENTIALS');
+            case 'UserNotConfirmedException':
+              throw new AuthenticationError('User account is not confirmed', 'USER_NOT_CONFIRMED');
+            case 'UserNotFoundException':
+              throw new AuthenticationError('User not found', 'USER_NOT_FOUND');
+            case 'PasswordResetRequiredException':
+              throw new AuthenticationError('Password reset is required', 'PASSWORD_RESET_REQUIRED');
+            case 'TooManyRequestsException':
+              throw new AuthenticationError(
+                'Too many requests, please try again later',
+                'TOO_MANY_REQUESTS'
+              );
+            case 'InvalidParameterException':
+              throw new ValidationError('Invalid parameters provided', 'INVALID_PARAMETERS');
+          }
+        }
       }
 
       // Handle AWS SDK errors with enhanced error mapping
@@ -457,6 +546,12 @@ export class CognitoAuthManager {
             throw new AuthenticationError('Login failed due to service error', 'LOGIN_FAILED');
         }
       }
+
+      // Use error handler for production-safe error processing only for unexpected errors
+      this.errorHandler.handleError(error, {
+        operation: 'login',
+        email: validatedEmail, // Will be sanitized in logs
+      });
 
       throw new AuthenticationError('Login failed due to unexpected error', 'LOGIN_FAILED');
     }
@@ -520,14 +615,33 @@ export class CognitoAuthManager {
 
       return result.result;
     } catch (error) {
-      // Use error handler for production-safe error processing
-      this.errorHandler.handleError(error, {
-        operation: 'refreshToken',
-        // Don't log the actual token for security
-      });
-
+      // Re-throw with appropriate error type based on the processed error
       if (error instanceof CognitoAuthError) {
         throw error;
+      }
+
+      // Handle NetworkError that wraps AWS errors from retry handler
+      if (error instanceof NetworkError && (error as any).originalError) {
+        const originalError = (error as any).originalError;
+        if (originalError && typeof originalError === 'object' && 'name' in originalError) {
+          const awsError = originalError as { name: string; message?: string };
+          switch (awsError.name) {
+            case 'NotAuthorizedException':
+              throw new AuthenticationError(
+                'Invalid or expired refresh token',
+                'INVALID_REFRESH_TOKEN'
+              );
+            case 'UserNotFoundException':
+              throw new AuthenticationError('User not found', 'USER_NOT_FOUND');
+            case 'TooManyRequestsException':
+              throw new AuthenticationError(
+                'Too many requests, please try again later',
+                'TOO_MANY_REQUESTS'
+              );
+            case 'InvalidParameterException':
+              throw new ValidationError('Invalid parameters provided', 'INVALID_PARAMETERS');
+          }
+        }
       }
 
       // Handle AWS SDK errors with enhanced error mapping
@@ -556,6 +670,12 @@ export class CognitoAuthManager {
             );
         }
       }
+
+      // Use error handler for production-safe error processing only for unexpected errors
+      this.errorHandler.handleError(error, {
+        operation: 'refreshToken',
+        // Don't log the actual token for security
+      });
 
       throw new AuthenticationError(
         'Token refresh failed due to unexpected error',
