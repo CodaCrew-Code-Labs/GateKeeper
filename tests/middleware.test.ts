@@ -23,6 +23,23 @@ vi.mock('../src/jwt-verification.js', () => ({
   }),
 }));
 
+// Mock validation module
+vi.mock('../src/validation.js', () => ({
+  validateAuthorizationHeader: vi.fn(header => (header?.startsWith('Bearer ') ? header : null)),
+  validateJWTToken: vi.fn(token => {
+    if (token && token.includes('.') && token.split('.').length === 3) {
+      return token;
+    }
+    throw new Error('Invalid token format');
+  }),
+  validateEmail: vi.fn(email => email),
+  validatePassword: vi.fn(password => password),
+  validateUsername: vi.fn(username => username),
+  validateVerificationCode: vi.fn(code => code),
+  validateStringInput: vi.fn(input => input),
+  sanitizeForLogging: vi.fn(obj => obj),
+}));
+
 describe('extractBearerToken', () => {
   it('should extract token from valid Bearer header', () => {
     // Create a mock JWT-like token (3 base64 parts separated by dots)

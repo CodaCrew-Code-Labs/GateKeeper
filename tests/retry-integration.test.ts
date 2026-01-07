@@ -25,7 +25,6 @@ vi.mock('@aws-sdk/client-cognito-identity-provider', () => ({
 
 describe('Network Retry Integration Tests', () => {
   let authManager: CognitoAuthManager;
-  let jwksCache: JWKSCache;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -35,8 +34,6 @@ describe('Network Retry Integration Tests', () => {
       clientId: 'testclientid123',
       region: 'us-east-1',
     });
-
-    jwksCache = new JWKSCache();
   });
 
   afterEach(() => {
@@ -60,6 +57,7 @@ describe('Network Retry Integration Tests', () => {
     it('should fail after max retry attempts', async () => {
       // This test verifies that the retry mechanism exists
       // The actual retry behavior is implementation-dependent
+      const jwksCache = new JWKSCache();
       expect(jwksCache).toBeDefined();
       expect(typeof jwksCache.getKeys).toBe('function');
     });
@@ -67,6 +65,7 @@ describe('Network Retry Integration Tests', () => {
     it('should retry on 5xx server errors', async () => {
       // This test verifies that the retry mechanism can handle server errors
       // The actual retry behavior is implementation-dependent
+      const jwksCache = new JWKSCache();
       expect(jwksCache).toBeDefined();
       expect(typeof jwksCache.getKeys).toBe('function');
     });
@@ -74,6 +73,7 @@ describe('Network Retry Integration Tests', () => {
     it('should not retry on 4xx client errors', async () => {
       // This test verifies that the retry mechanism can distinguish error types
       // The actual retry behavior is implementation-dependent
+      const jwksCache = new JWKSCache();
       expect(jwksCache).toBeDefined();
       expect(typeof jwksCache.getKeys).toBe('function');
     });

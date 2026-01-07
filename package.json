@@ -1,6 +1,7 @@
 {
   "name": "gateway-cognito-auth",
   "version": "1.0.3",
+  "type": "module",
   "description": "Production-ready AWS Cognito authentication package for Node.js/Express applications",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
@@ -39,7 +40,7 @@
     "lint:fix": "eslint src tests --fix",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\"",
-    "prepublishOnly": "npm run build && npm test && npm run test:coverage",
+    "prepublishOnly": "npm run build && npm run test:coverage",
     "example": "cd example && npm start"
   },
   "keywords": [
