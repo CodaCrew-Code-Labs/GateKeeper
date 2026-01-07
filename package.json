@@ -1,6 +1,6 @@
 {
   "name": "gateway-cognito-auth",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "type": "module",
   "description": "Production-ready AWS Cognito authentication package for Node.js/Express applications",
   "main": "./dist/cjs/index.js",
