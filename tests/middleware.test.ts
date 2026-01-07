@@ -18,9 +18,9 @@ const mockVerifyToken = vi.fn().mockResolvedValue({
 });
 
 vi.mock('../src/jwt-verification.js', () => ({
-  JWTVerifier: vi.fn().mockImplementation(() => ({
-    verifyToken: mockVerifyToken,
-  })),
+  JWTVerifier: vi.fn(function (_config) {
+    this.verifyToken = mockVerifyToken;
+  }),
 }));
 
 describe('extractBearerToken', () => {
