@@ -161,8 +161,8 @@ export class CognitoAuthManager {
       }
 
       // Handle NetworkError that wraps AWS errors from retry handler
-      if (error instanceof NetworkError && (error as any).originalError) {
-        const originalError = (error as any).originalError;
+      if (error instanceof NetworkError && 'originalError' in error) {
+        const originalError = (error as NetworkError & { originalError: unknown }).originalError;
         if (originalError && typeof originalError === 'object' && 'name' in originalError) {
           const awsError = originalError as { name: string; message?: string };
           switch (awsError.name) {
@@ -279,8 +279,8 @@ export class CognitoAuthManager {
       }
 
       // Handle NetworkError that wraps AWS errors from retry handler
-      if (error instanceof NetworkError && (error as any).originalError) {
-        const originalError = (error as any).originalError;
+      if (error instanceof NetworkError && 'originalError' in error) {
+        const originalError = (error as NetworkError & { originalError: unknown }).originalError;
         if (originalError && typeof originalError === 'object' && 'name' in originalError) {
           const awsError = originalError as { name: string; message?: string };
           switch (awsError.name) {
@@ -368,8 +368,8 @@ export class CognitoAuthManager {
       }
 
       // Handle NetworkError that wraps AWS errors from retry handler
-      if (error instanceof NetworkError && (error as any).originalError) {
-        const originalError = (error as any).originalError;
+      if (error instanceof NetworkError && 'originalError' in error) {
+        const originalError = (error as NetworkError & { originalError: unknown }).originalError;
         if (originalError && typeof originalError === 'object' && 'name' in originalError) {
           const awsError = originalError as { name: string; message?: string };
           switch (awsError.name) {
@@ -498,8 +498,8 @@ export class CognitoAuthManager {
       }
 
       // Handle NetworkError that wraps AWS errors from retry handler
-      if (error instanceof NetworkError && (error as any).originalError) {
-        const originalError = (error as any).originalError;
+      if (error instanceof NetworkError && 'originalError' in error) {
+        const originalError = (error as NetworkError & { originalError: unknown }).originalError;
         if (originalError && typeof originalError === 'object' && 'name' in originalError) {
           const awsError = originalError as { name: string; message?: string };
           switch (awsError.name) {
@@ -510,7 +510,10 @@ export class CognitoAuthManager {
             case 'UserNotFoundException':
               throw new AuthenticationError('User not found', 'USER_NOT_FOUND');
             case 'PasswordResetRequiredException':
-              throw new AuthenticationError('Password reset is required', 'PASSWORD_RESET_REQUIRED');
+              throw new AuthenticationError(
+                'Password reset is required',
+                'PASSWORD_RESET_REQUIRED'
+              );
             case 'TooManyRequestsException':
               throw new AuthenticationError(
                 'Too many requests, please try again later',
@@ -621,8 +624,8 @@ export class CognitoAuthManager {
       }
 
       // Handle NetworkError that wraps AWS errors from retry handler
-      if (error instanceof NetworkError && (error as any).originalError) {
-        const originalError = (error as any).originalError;
+      if (error instanceof NetworkError && 'originalError' in error) {
+        const originalError = (error as NetworkError & { originalError: unknown }).originalError;
         if (originalError && typeof originalError === 'object' && 'name' in originalError) {
           const awsError = originalError as { name: string; message?: string };
           switch (awsError.name) {
