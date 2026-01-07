@@ -1,0 +1,38 @@
+name: Debug Test Failure
+
+on:
+  workflow_dispatch:  # Manual trigger for debugging
+
+jobs:
+  debug-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v6
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: '22'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Show environment info
+      run: |
+        node --version
+        npm --version
+        echo "OS: $(uname -a)"
+        echo "Memory: $(free -h)"
+        echo "CPU: $(nproc)"
+    
+    - name: Run single test file
+      run: npx vitest --run tests/basic.test.ts --reporter=verbose
+      
+    - name: Run tests with maximum verbosity
+      run: npm test
+      env:
+        NODE_OPTIONS: '--max-old-space-size=4096'
+        DEBUG: '*'
+        VITEST_REPORTER: 'verbose'

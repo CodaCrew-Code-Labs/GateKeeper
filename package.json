@@ -33,7 +33,7 @@
     "clean": "rimraf dist",
     "dev": "tsc --watch",
     "dev:stop": "chmod +x scripts/dev-stop.sh && ./scripts/dev-stop.sh",
-    "test": "vitest --run",
+    "test": "vitest --run --reporter=verbose",
     "test:watch": "vitest",
     "test:coverage": "vitest --coverage --run",
     "lint": "eslint src tests",

@@ -16,7 +16,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v6
       with:
-        node-version: '20'
+        node-version: '22'
         cache: 'npm'
     
     - name: Install dependencies
@@ -29,4 +29,14 @@ jobs:
       run: npm run lint
     
     - name: Run tests
-      run: npm test
+      run: |
+        echo "Running tests with increased verbosity..."
+        npm test || {
+          echo "Tests failed, running with debug info..."
+          DEBUG=vitest* npm test
+          exit 1
+        }
+      env:
+        NODE_OPTIONS: '--max-old-space-size=4096'
+        DEBUG: 'vitest*'
+        VITEST_REPORTER: 'verbose'
