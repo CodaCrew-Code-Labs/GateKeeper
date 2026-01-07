@@ -13,9 +13,11 @@
 const http = require('http');
 
 // Configuration
-const BASE_URL = 'http://localhost:3000';
+const BASE_URL = 'http://localhost:3001';
 const TEST_EMAIL = 'test@example.com';
+const TEST_EMAIL2 = 'testuser2@gmail.com';
 const TEST_PASSWORD = 'TestPassword123!';
+const TEST_USER = "testuser2"
 
 /**
  * Make HTTP request helper
@@ -125,6 +127,26 @@ async function runTests() {
     });
     console.log(`   Status: ${signup.status}`);
     console.log(`   Response: ${JSON.stringify(signup.data, null, 2)}\n`);
+
+    // Test 2a: Signup with username
+    console.log('2️⃣.a Testing signup with username endpoint...');
+    const signupUsername = await makeRequest('POST', '/auth/signup-username', {
+      username: TEST_USER,
+      email: TEST_EMAIL2,
+      password: TEST_PASSWORD
+    });
+    console.log(`   Status: ${signupUsername.status}`);
+    console.log(`   Response: ${JSON.stringify(signupUsername.data, null, 2)}\n`);
+
+    // Test 2b: Google OAuth URL
+    console.log('2️⃣.b Testing Google OAuth URL generation...');
+    const googleUrl = await makeRequest('GET', '/auth/google/url');
+    console.log(`   Status: ${googleUrl.status}`);
+    if (googleUrl.status === 200) {
+      console.log(`   URL: ${googleUrl.data.url}`);
+    } else {
+      console.log(`   Error: ${JSON.stringify(googleUrl.data)}`);
+    }
 
     // Test 3: Login (will fail without real Cognito, but shows the API)
     console.log('3️⃣  Testing login endpoint...');

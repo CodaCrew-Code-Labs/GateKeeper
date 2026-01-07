@@ -15,6 +15,10 @@ export interface CognitoConfig {
   clientSecret?: string;
   /** AWS region where the User Pool is located */
   region: string;
+  /** Cognito Domain (e.g. https://your-domain.auth.us-east-1.amazoncognito.com) - Required for OAuth */
+  domain?: string;
+  /** Redirect URI for OAuth callbacks - Required for OAuth */
+  redirectUri?: string;
 }
 
 /**

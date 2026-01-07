@@ -8,7 +8,7 @@ require('dotenv').config();
 // Import the authentication package
 // In a real application, this would be: const { CognitoAuthManager } = require('@gateway/cognito-auth');
 // For this example, we'll use the local build
-const { CognitoAuthManager } = require('../dist/index.js');
+const { CognitoAuthManager } = require('../dist/cjs/index.js');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -30,7 +30,9 @@ try {
     userPoolId: process.env.COGNITO_USER_POOL_ID,
     clientId: process.env.COGNITO_CLIENT_ID,
     clientSecret: process.env.COGNITO_CLIENT_SECRET, // Optional for public clients
-    region: process.env.AWS_REGION || 'us-east-1'
+    region: process.env.AWS_REGION || 'us-east-1',
+    domain: process.env.COGNITO_DOMAIN,
+    redirectUri: process.env.COGNITO_REDIRECT_URI
   });
   console.log('✅ CognitoAuthManager initialized successfully');
 } catch (error) {
@@ -61,7 +63,9 @@ app.get('/', (req, res) => {
         'POST /auth/signup',
         'POST /auth/confirm',
         'POST /auth/login',
-        'POST /auth/refresh'
+        'POST /auth/refresh',
+        'GET /auth/google/url',
+        'POST /auth/google/callback'
       ],
       protected: [
         'GET /profile',
@@ -70,6 +74,49 @@ app.get('/', (req, res) => {
       ]
     }
   });
+});
+
+/**
+ * Get Google OAuth Login URL
+ */
+app.get('/auth/google/url', (req, res) => {
+  try {
+    const url = authManager.getGoogleAuthUrl();
+    res.json({ url });
+  } catch (error) {
+    console.error('Google Auth URL error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Google OAuth Callback
+ * Exchanges the code for tokens
+ */
+app.post('/auth/google/callback', async (req, res) => {
+  try {
+    const { code } = req.body;
+    
+    if (!code) {
+      return res.status(400).json({ error: 'Authorization code is required' });
+    }
+
+    const tokens = await authManager.exchangeCodeForTokens(code);
+    
+    res.json({
+      message: 'Google login successful',
+      tokens: {
+        idToken: tokens.idToken,
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken
+      }
+    });
+  } catch (error) {
+    console.error('Google callback error:', error);
+    res.status(error.statusCode || 500).json({
+      error: error.message || 'Google login failed'
+    });
+  }
 });
 
 /**
@@ -90,6 +137,35 @@ app.post('/auth/signup', async (req, res) => {
     
     res.status(201).json({
       message: 'User created successfully. Please check your email for verification code.',
+      userSub: result.userSub
+    });
+  } catch (error) {
+    console.error('Signup error:', error);
+    res.status(error.statusCode || 500).json({
+      error: error.message || 'Signup failed'
+    });
+  }
+});
+
+/**
+ * User signup with username endpoint
+ * Demonstrates the signup flow with username, email and password
+ */
+app.post('/auth/signup-username', async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+    
+    if (!username || !email || !password) {
+      return res.status(400).json({
+        error: 'Username, email and password are required'
+      });
+    }
+
+    // Call the new signupWithUsername method
+    const result = await authManager.signupWithUsername(username, email, password);
+    
+    res.status(201).json({
+      message: 'User created successfully with username. Please check your email for verification code.',
       userSub: result.userSub
     });
   } catch (error) {
@@ -295,6 +371,8 @@ app.listen(port, () => {
   console.log(`   Client ID: ${process.env.COGNITO_CLIENT_ID ? '✅ Set' : '❌ Missing'}`);
   console.log(`   Client Secret: ${process.env.COGNITO_CLIENT_SECRET ? '✅ Set' : '⚠️  Not set (OK for public clients)'}`);
   console.log(`   AWS Region: ${process.env.AWS_REGION || 'us-east-1'}`);
+  console.log(`   Cognito Domain: ${process.env.COGNITO_DOMAIN ? '✅ Set' : '❌ Missing'}`);
+  console.log(`   Redirect URI: ${process.env.COGNITO_REDIRECT_URI ? '✅ Set' : '❌ Missing'}`);
   console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
   
   if (!process.env.COGNITO_USER_POOL_ID || !process.env.COGNITO_CLIENT_ID) {

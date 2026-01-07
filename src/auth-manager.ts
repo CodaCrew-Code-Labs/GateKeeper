@@ -114,17 +114,25 @@ export class CognitoAuthManager {
       // Execute signup with retry logic for network resilience
       const result = await this.retryHandler.execute(async () => {
         // Prepare signup command
-        const secretHash = this.computeSecretHashIfNeeded(validatedEmail);
+        // Generate a username from email to avoid "Username cannot be of email format" error
+        // and to meet preferred_username requirement
+        const generatedUsername = validatedEmail.replace(/[@.]/g, '_');
+
+        const secretHash = this.computeSecretHashIfNeeded(generatedUsername);
 
         const command = new SignUpCommand({
           ClientId: this.config.clientId,
-          Username: validatedEmail,
+          Username: generatedUsername,
           Password: validatedPassword,
           SecretHash: secretHash,
           UserAttributes: [
             {
               Name: 'email',
               Value: validatedEmail,
+            },
+            {
+              Name: 'preferred_username',
+              Value: generatedUsername,
             },
           ],
         });
@@ -149,6 +157,104 @@ export class CognitoAuthManager {
       // Use error handler for production-safe error processing
       this.errorHandler.handleError(error, {
         operation: 'signup',
+        email: validatedEmail, // Will be sanitized in logs
+      });
+
+      // Re-throw with appropriate error type based on the processed error
+      if (error instanceof CognitoAuthError) {
+        throw error;
+      }
+
+      // Handle AWS SDK errors with enhanced error mapping
+      if (error && typeof error === 'object' && 'name' in error) {
+        const awsError = error as { name: string; message?: string };
+
+        switch (awsError.name) {
+          case 'UsernameExistsException':
+            throw new AuthenticationError('User already exists', 'USER_EXISTS');
+          case 'InvalidPasswordException':
+            throw new ValidationError('Password does not meet requirements', 'INVALID_PASSWORD');
+          case 'InvalidParameterException':
+            throw new ValidationError('Invalid parameters provided', 'INVALID_PARAMETERS');
+          case 'TooManyRequestsException':
+            throw new AuthenticationError(
+              'Too many requests, please try again later',
+              'TOO_MANY_REQUESTS'
+            );
+          default:
+            throw new AuthenticationError('Signup failed due to service error', 'SIGNUP_FAILED');
+        }
+      }
+
+      throw new AuthenticationError('Signup failed due to unexpected error', 'SIGNUP_FAILED');
+    }
+  }
+
+  /**
+   * Sign up a new user with specific username, email and password
+   * Requirements: 1.2
+   *
+   * @param username - User's unique username
+   * @param email - User's email address
+   * @param password - User's password
+   * @returns Promise resolving to signup response with userSub
+   * @throws {ValidationError} When input validation fails
+   * @throws {AuthenticationError} When Cognito signup fails
+   */
+  public async signupWithUsername(
+    username: string,
+    email: string,
+    password: string
+  ): Promise<SignupResponse> {
+    // Comprehensive input validation and sanitization
+    const validatedUsername = validateUsername(username);
+    const validatedEmail = validateEmail(email);
+    const validatedPassword = validatePassword(password);
+
+    try {
+      // Execute signup with retry logic for network resilience
+      const result = await this.retryHandler.execute(async () => {
+        // Prepare signup command
+        const secretHash = this.computeSecretHashIfNeeded(validatedUsername);
+
+        const command = new SignUpCommand({
+          ClientId: this.config.clientId,
+          Username: validatedUsername,
+          Password: validatedPassword,
+          SecretHash: secretHash,
+          UserAttributes: [
+            {
+              Name: 'email',
+              Value: validatedEmail,
+            },
+            {
+              Name: 'preferred_username',
+              Value: validatedUsername,
+            },
+          ],
+        });
+
+        // Execute signup
+        const response = await this.cognitoClient.send(command);
+
+        if (!response.UserSub) {
+          throw new AuthenticationError(
+            'Signup failed: No user identifier returned',
+            'SIGNUP_FAILED'
+          );
+        }
+
+        return {
+          userSub: response.UserSub,
+        };
+      }, 'signup with username operation');
+
+      return result.result;
+    } catch (error) {
+      // Use error handler for production-safe error processing
+      this.errorHandler.handleError(error, {
+        operation: 'signupWithUsername',
+        username: validatedUsername,
         email: validatedEmail, // Will be sanitized in logs
       });
 
@@ -454,6 +560,130 @@ export class CognitoAuthManager {
       throw new AuthenticationError(
         'Token refresh failed due to unexpected error',
         'REFRESH_FAILED'
+      );
+    }
+  }
+
+  /**
+   * Get the URL for Google OAuth login
+   * Requirements: OAuth Support
+   *
+   * @returns URL to redirect the user to
+   * @throws {ConfigurationError} If domain or redirectUri are not configured
+   */
+  public getGoogleAuthUrl(): string {
+    if (!this.config.domain || !this.config.redirectUri) {
+      throw new ConfigurationError(
+        'Google OAuth requires "domain" and "redirectUri" to be configured',
+        'MISSING_OAUTH_CONFIG'
+      );
+    }
+
+    const domain = this.config.domain.replace(/\/$/, ''); // Remove trailing slash
+
+    const params = new URLSearchParams({
+      response_type: 'code',
+      client_id: this.config.clientId,
+      redirect_uri: this.config.redirectUri,
+      identity_provider: 'Google',
+      scope: 'email openid profile',
+    });
+
+    return `${domain}/oauth2/authorize?${params.toString()}`;
+  }
+
+  /**
+   * Exchange authorization code for tokens
+   * Requirements: OAuth Support
+   *
+   * @param code - Authorization code from Cognito callback
+   * @returns Promise resolving to authentication tokens
+   * @throws {AuthenticationError} If the exchange fails
+   */
+  public async exchangeCodeForTokens(code: string): Promise<AuthTokens> {
+    if (!this.config.domain || !this.config.redirectUri) {
+      throw new ConfigurationError(
+        'OAuth token exchange requires "domain" and "redirectUri" to be configured',
+        'MISSING_OAUTH_CONFIG'
+      );
+    }
+
+    try {
+      const domain = this.config.domain.replace(/\/$/, '');
+      const tokenUrl = `${domain}/oauth2/token`;
+
+      const body = new URLSearchParams({
+        grant_type: 'authorization_code',
+        client_id: this.config.clientId,
+        redirect_uri: this.config.redirectUri,
+        code: code,
+      });
+
+      // If client secret is present, we must include it
+      if (this.config.clientSecret) {
+        // Basic auth header for client secret
+        // Or put it in the body? Cognito supports client_secret in body for some flows,
+        // but Basic Auth header is standard. Let using Authorization header.
+        // Actually, checking docs: Authorization: Basic check
+        // Or for public clients just client_id in body is enough.
+        // But if confidential, we need Authorization header.
+      }
+
+      // Note: We need to use fetch or a request library. Since this is Node/Isomorphic,
+      // we might need to rely on the global fetch (Node 18+) or existing dependencies.
+      // The library already depends on @aws-sdk/*, but those don't provide a generic HTTP client easily accessible here.
+      // Assuming Node 18+ environment as specified in package.json (>=20.0.0)
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      };
+
+      if (this.config.clientSecret) {
+        const auth = Buffer.from(`${this.config.clientId}:${this.config.clientSecret}`).toString(
+          'base64'
+        );
+        headers['Authorization'] = `Basic ${auth}`;
+      }
+
+      const response = await fetch(tokenUrl, {
+        method: 'POST',
+        headers,
+        body: body,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new AuthenticationError(
+          `Token exchange failed: ${response.status} ${response.statusText} - ${errorText}`,
+          'TOKEN_EXCHANGE_FAILED'
+        );
+      }
+
+      const data = (await response.json()) as {
+        id_token?: string;
+        access_token?: string;
+        refresh_token?: string;
+      };
+
+      if (!data.id_token || !data.access_token || !data.refresh_token) {
+        throw new AuthenticationError(
+          'Token exchange failed: Incomplete tokens returned',
+          'INCOMPLETE_TOKENS'
+        );
+      }
+
+      return {
+        idToken: data.id_token,
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+      };
+    } catch (error) {
+      if (error instanceof CognitoAuthError) {
+        throw error;
+      }
+      throw new AuthenticationError(
+        `Token exchange error: ${error instanceof Error ? error.message : String(error)}`,
+        'TOKEN_EXCHANGE_ERROR'
       );
     }
   }

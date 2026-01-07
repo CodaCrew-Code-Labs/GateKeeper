@@ -25,6 +25,10 @@ export const CognitoConfigSchema = z.object({
     .string()
     .min(1, 'AWS region is required')
     .regex(/^[a-z0-9-]+$/, 'AWS region must be a valid region identifier'),
+
+  domain: z.string().url('Cognito domain must be a valid URL').optional(),
+
+  redirectUri: z.string().url('Redirect URI must be a valid URL').optional(),
 });
 
 /**
