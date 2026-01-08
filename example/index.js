@@ -3,15 +3,16 @@
 
 const express = require('express');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
 require('dotenv').config();
 
 // Import the authentication package
 // In a real application, this would be: const { CognitoAuthManager } = require('@gateway/cognito-auth');
 // For this example, we'll use the local build
-const { CognitoAuthManager } = require('../dist/cjs/index.js');
+const { CognitoAuthManager } = require('../dist/cjs/index.cjs');
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3010;
 
 // Middleware for parsing JSON bodies
 app.use(express.json());
@@ -61,11 +62,13 @@ app.get('/', (req, res) => {
       public: [
         'GET /',
         'POST /auth/signup',
-        'POST /auth/confirm',
+        'POST /auth/forgot-password',
+        'POST /auth/reset-password',
         'POST /auth/login',
         'POST /auth/refresh',
         'GET /auth/google/url',
-        'POST /auth/google/callback'
+        'POST /auth/google/callback',
+        'GET /reset-password'
       ],
       protected: [
         'GET /profile',
@@ -74,6 +77,13 @@ app.get('/', (req, res) => {
       ]
     }
   });
+});
+
+/**
+ * Serve reset password page
+ */
+app.get('/reset-password', (req, res) => {
+  res.sendFile(path.join(__dirname, 'reset-password.html'));
 });
 
 /**
@@ -177,28 +187,55 @@ app.post('/auth/signup-username', async (req, res) => {
 });
 
 /**
- * Signup confirmation endpoint
- * Demonstrates confirming user signup with verification code
+ * Forgot password endpoint
+ * Sends password reset link to user's email
  */
-app.post('/auth/confirm', async (req, res) => {
+app.post('/auth/forgot-password', async (req, res) => {
   try {
-    const { username, code } = req.body;
+    const { email } = req.body;
     
-    if (!username || !code) {
+    if (!email) {
       return res.status(400).json({
-        error: 'Username and verification code are required'
+        error: 'Email is required'
       });
     }
 
-    await authManager.confirmSignup(username, code);
+    await authManager.forgotPassword(email);
     
     res.json({
-      message: 'Account confirmed successfully. You can now log in.'
+      message: 'Password reset link sent to your email'
     });
   } catch (error) {
-    console.error('Confirmation error:', error);
+    console.error('Forgot password error:', error);
     res.status(error.statusCode || 500).json({
-      error: error.message || 'Confirmation failed'
+      error: error.message || 'Password reset request failed'
+    });
+  }
+});
+
+/**
+ * Reset password endpoint
+ * Confirms password reset with code and new password
+ */
+app.post('/auth/reset-password', async (req, res) => {
+  try {
+    const { username, code, newPassword } = req.body;
+    
+    if (!username || !code || !newPassword) {
+      return res.status(400).json({
+        error: 'Username, verification code, and new password are required'
+      });
+    }
+
+    await authManager.confirmForgotPassword(username, code, newPassword);
+    
+    res.json({
+      message: 'Password reset successful. You can now log in with your new password.'
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(error.statusCode || 500).json({
+      error: error.message || 'Password reset failed'
     });
   }
 });

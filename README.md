@@ -116,21 +116,38 @@ try {
 - `ValidationError` - Invalid email or password format
 - `AuthenticationError` - User already exists or Cognito service error
 
-##### `confirmSignup(username: string, code: string): Promise<void>`
+##### `forgotPassword(email: string): Promise<void>`
 
-Confirm user registration with verification code.
+Initiate password reset flow by sending reset link to user's email.
 
 ```typescript
 try {
-  await authManager.confirmSignup('user@example.com', '123456');
-  console.log('User confirmed successfully');
+  await authManager.forgotPassword('user@example.com');
+  console.log('Password reset link sent to email');
 } catch (error) {
-  console.error('Confirmation failed:', error.message);
+  console.error('Password reset request failed:', error.message);
 }
 ```
 
 **Throws:**
-- `ValidationError` - Invalid username or code format
+- `ValidationError` - Invalid email format
+- `AuthenticationError` - User not found or service error
+
+##### `confirmForgotPassword(username: string, code: string, newPassword: string): Promise<void>`
+
+Confirm password reset with verification code and new password.
+
+```typescript
+try {
+  await authManager.confirmForgotPassword('user@example.com', '123456', 'NewSecurePassword123!');
+  console.log('Password reset successful');
+} catch (error) {
+  console.error('Password reset failed:', error.message);
+}
+```
+
+**Throws:**
+- `ValidationError` - Invalid input format
 - `AuthenticationError` - Invalid/expired code or user not found
 
 ##### `login(email: string, password: string): Promise<AuthTokens>`
@@ -484,14 +501,29 @@ app.post('/auth/signup', async (req, res) => {
   }
 });
 
-app.post('/auth/confirm', async (req, res) => {
+app.post('/auth/forgot-password', async (req, res) => {
   try {
-    const { username, code } = req.body;
-    await authManager.confirmSignup(username, code);
-    res.json({ success: true });
+    const { email } = req.body;
+    await authManager.forgotPassword(email);
+    res.json({ success: true, message: 'Password reset link sent to email' });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
+});
+
+app.post('/auth/reset-password', async (req, res) => {
+  try {
+    const { username, code, newPassword } = req.body;
+    await authManager.confirmForgotPassword(username, code, newPassword);
+    res.json({ success: true, message: 'Password reset successful' });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+app.get('/reset-password', (req, res) => {
+  // Serve password reset page
+  res.sendFile(path.join(__dirname, 'reset-password.html'));
 });
 
 app.post('/auth/login', async (req, res) => {

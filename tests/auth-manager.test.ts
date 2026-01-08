@@ -12,7 +12,9 @@ vi.mock('@aws-sdk/client-cognito-identity-provider', () => ({
     send = vi.fn();
   },
   SignUpCommand: vi.fn(),
-  ConfirmSignUpCommand: vi.fn(),
+  ForgotPasswordCommand: vi.fn(),
+  ConfirmForgotPasswordCommand: vi.fn(),
+  AdminGetUserCommand: vi.fn(),
   InitiateAuthCommand: vi.fn(),
   AuthFlowType: {
     USER_PASSWORD_AUTH: 'USER_PASSWORD_AUTH',
@@ -196,38 +198,33 @@ describe('CognitoAuthManager', () => {
     });
   });
 
-  describe('confirmSignup', () => {
-    it('should confirm signup successfully', async () => {
+  describe('forgotPassword', () => {
+    it('should send password reset successfully', async () => {
       authManager = new CognitoAuthManager(validConfig);
 
-      vi.spyOn(authManager['cognitoClient'], 'send').mockResolvedValueOnce({});
+      // Mock AdminGetUserCommand to return a regular user (not OAuth)
+      vi.spyOn(authManager['cognitoClient'], 'send')
+        .mockResolvedValueOnce({
+          UserAttributes: [{ Name: 'email', Value: 'test@example.com' }],
+        })
+        .mockResolvedValueOnce({}); // ForgotPasswordCommand response
 
-      await expect(authManager.confirmSignup('testuser', '123456')).resolves.toBeUndefined();
+      await expect(authManager.forgotPassword('test@example.com')).resolves.toBeUndefined();
     });
 
-    it('should throw error for invalid code', async () => {
+    it('should throw error for OAuth user', async () => {
       authManager = new CognitoAuthManager(validConfig);
 
-      const awsError = Object.assign(new Error('Invalid verification code'), {
-        name: 'CodeMismatchException',
+      // Mock AdminGetUserCommand to return OAuth user
+      vi.spyOn(authManager['cognitoClient'], 'send').mockResolvedValueOnce({
+        UserAttributes: [
+          { Name: 'email', Value: 'test@example.com' },
+          { Name: 'identities', Value: JSON.stringify([{ providerType: 'Google' }]) },
+        ],
       });
-      vi.spyOn(authManager['cognitoClient'], 'send').mockRejectedValueOnce(awsError);
 
-      await expect(authManager.confirmSignup('testuser', '123456')).rejects.toThrow(
-        /Invalid|code/i
-      );
-    });
-
-    it('should throw error for expired code', async () => {
-      authManager = new CognitoAuthManager(validConfig);
-
-      const awsError = Object.assign(new Error('Code has expired'), {
-        name: 'ExpiredCodeException',
-      });
-      vi.spyOn(authManager['cognitoClient'], 'send').mockRejectedValueOnce(awsError);
-
-      await expect(authManager.confirmSignup('testuser', '123456')).rejects.toThrow(
-        /expired|code/i
+      await expect(authManager.forgotPassword('test@example.com')).rejects.toThrow(
+        /OAuth users|Password reset not available/
       );
     });
 
@@ -239,22 +236,47 @@ describe('CognitoAuthManager', () => {
       });
       vi.spyOn(authManager['cognitoClient'], 'send').mockRejectedValueOnce(awsError);
 
-      await expect(authManager.confirmSignup('unknownuser', '123456')).rejects.toThrow(
+      await expect(authManager.forgotPassword('unknown@example.com')).rejects.toThrow(
         /User not found/
       );
     });
+  });
 
-    it('should throw error for already confirmed user', async () => {
+  describe('confirmForgotPassword', () => {
+    it('should reset password successfully', async () => {
       authManager = new CognitoAuthManager(validConfig);
 
-      const awsError = Object.assign(new Error('User is already confirmed'), {
-        name: 'NotAuthorizedException',
+      vi.spyOn(authManager['cognitoClient'], 'send').mockResolvedValueOnce({});
+
+      await expect(
+        authManager.confirmForgotPassword('test@example.com', '123456', 'NewPassword123!')
+      ).resolves.toBeUndefined();
+    });
+
+    it('should throw error for invalid code', async () => {
+      authManager = new CognitoAuthManager(validConfig);
+
+      const awsError = Object.assign(new Error('Invalid verification code'), {
+        name: 'CodeMismatchException',
       });
       vi.spyOn(authManager['cognitoClient'], 'send').mockRejectedValueOnce(awsError);
 
-      await expect(authManager.confirmSignup('confirmeduser', '123456')).rejects.toThrow(
-        /already confirmed|confirmed/i
-      );
+      await expect(
+        authManager.confirmForgotPassword('test@example.com', '123456', 'NewPassword123!')
+      ).rejects.toThrow(/Invalid|code/i);
+    });
+
+    it('should throw error for expired code', async () => {
+      authManager = new CognitoAuthManager(validConfig);
+
+      const awsError = Object.assign(new Error('Code has expired'), {
+        name: 'ExpiredCodeException',
+      });
+      vi.spyOn(authManager['cognitoClient'], 'send').mockRejectedValueOnce(awsError);
+
+      await expect(
+        authManager.confirmForgotPassword('test@example.com', '123456', 'NewPassword123!')
+      ).rejects.toThrow(/expired|code/i);
     });
   });
 

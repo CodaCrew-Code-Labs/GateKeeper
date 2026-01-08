@@ -13,7 +13,7 @@
 const http = require('http');
 
 // Configuration
-const BASE_URL = 'http://localhost:3001';
+const BASE_URL = 'http://localhost:3010';
 const TEST_EMAIL = 'test@example.com';
 const TEST_EMAIL2 = 'testuser2@gmail.com';
 const TEST_PASSWORD = 'TestPassword123!';
@@ -181,8 +181,26 @@ async function runTests() {
     console.log(`   Status: ${tenantEndpoint.status}`);
     console.log(`   Response: ${JSON.stringify(tenantEndpoint.data, null, 2)}\n`);
 
-    // Test 8: 404 endpoint
-    console.log('8️⃣  Testing 404 endpoint...');
+    // Test 8: Forgot password
+    console.log('8️⃣  Testing forgot password endpoint...');
+    const forgotPassword = await makeRequest('POST', '/auth/forgot-password', {
+      email: TEST_EMAIL
+    });
+    console.log(`   Status: ${forgotPassword.status}`);
+    console.log(`   Response: ${JSON.stringify(forgotPassword.data, null, 2)}\n`);
+
+    // Test 9: Reset password
+    console.log('9️⃣  Testing reset password endpoint...');
+    const resetPassword = await makeRequest('POST', '/auth/reset-password', {
+      username: TEST_EMAIL,
+      code: '123456',
+      newPassword: 'NewPassword123!'
+    });
+    console.log(`   Status: ${resetPassword.status}`);
+    console.log(`   Response: ${JSON.stringify(resetPassword.data, null, 2)}\n`);
+
+    // Test 10: 404 endpoint
+    console.log('🔟 Testing 404 endpoint...');
     const notFound = await makeRequest('GET', '/nonexistent');
     console.log(`   Status: ${notFound.status}`);
     console.log(`   Response: ${JSON.stringify(notFound.data, null, 2)}\n`);

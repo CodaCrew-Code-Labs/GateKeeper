@@ -97,7 +97,8 @@ describe('Package Compatibility Property Tests', () => {
           expect(manager).toBeInstanceOf(CognitoAuthManager);
           expect(typeof manager.signup).toBe('function');
           expect(typeof manager.login).toBe('function');
-          expect(typeof manager.confirmSignup).toBe('function');
+          expect(typeof manager.forgotPassword).toBe('function');
+          expect(typeof manager.confirmForgotPassword).toBe('function');
           expect(typeof manager.refreshToken).toBe('function');
           expect(typeof manager.authMiddleware).toBe('function');
         } finally {

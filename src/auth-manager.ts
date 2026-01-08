@@ -4,9 +4,11 @@
 import {
   CognitoIdentityProviderClient,
   SignUpCommand,
-  ConfirmSignUpCommand,
   InitiateAuthCommand,
   AuthFlowType,
+  ForgotPasswordCommand,
+  ConfirmForgotPasswordCommand,
+  AdminGetUserCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
 import { CognitoConfig, AuthTokens, SignupResponse, AuthMiddlewareOptions } from './types.js';
 import { validateCognitoConfig } from './config.js';
@@ -332,42 +334,134 @@ export class CognitoAuthManager {
   }
 
   /**
-   * Confirm user signup with verification code
-   * Requirements: 1.3
+   * Initiate forgot password flow - sends reset link to user's email
+   * Checks if user exists and is not an OAuth user before sending email
    *
-   * @param username - Username (typically email) used during signup
-   * @param code - Verification code received by user
+   * @param email - User's email address
    * @throws {ValidationError} When input validation fails
-   * @throws {AuthenticationError} When confirmation fails
+   * @throws {AuthenticationError} When forgot password request fails
    */
-  public async confirmSignup(username: string, code: string): Promise<void> {
-    // Comprehensive input validation and sanitization
-    const validatedUsername = validateUsername(username);
-    const validatedCode = validateVerificationCode(code);
+  public async forgotPassword(email: string): Promise<void> {
+    const validatedEmail = validateEmail(email);
 
     try {
-      // Execute confirmation with retry logic for network resilience
+      // First check if user exists and get user details
       await this.retryHandler.execute(async () => {
-        // Prepare confirm signup command
-        const secretHash = this.computeSecretHashIfNeeded(validatedUsername);
+        const getUserCommand = new AdminGetUserCommand({
+          UserPoolId: this.config.userPoolId,
+          Username: validatedEmail,
+        });
 
-        const command = new ConfirmSignUpCommand({
+        const userResponse = await this.cognitoClient.send(getUserCommand);
+
+        // Check if user is from OAuth provider
+        const identities = userResponse.UserAttributes?.find(attr => attr.Name === 'identities');
+        if (identities?.Value) {
+          const identityData = JSON.parse(identities.Value);
+          if (Array.isArray(identityData) && identityData.some(id => id.providerType !== 'SAML')) {
+            throw new AuthenticationError(
+              'Password reset not available for OAuth users',
+              'OAUTH_USER_PASSWORD_RESET'
+            );
+          }
+        }
+
+        // If user exists and is not OAuth, proceed with forgot password
+        const secretHash = this.computeSecretHashIfNeeded(validatedEmail);
+
+        const command = new ForgotPasswordCommand({
           ClientId: this.config.clientId,
-          Username: validatedUsername,
-          ConfirmationCode: validatedCode,
+          Username: validatedEmail,
           SecretHash: secretHash,
         });
 
-        // Execute confirmation
         await this.cognitoClient.send(command);
-      }, 'confirm signup operation');
+      }, 'forgot password operation');
     } catch (error) {
-      // Re-throw with appropriate error type based on the processed error
       if (error instanceof CognitoAuthError) {
         throw error;
       }
 
-      // Handle NetworkError that wraps AWS errors from retry handler
+      if (error instanceof NetworkError && 'originalError' in error) {
+        const originalError = (error as NetworkError & { originalError: unknown }).originalError;
+        if (originalError && typeof originalError === 'object' && 'name' in originalError) {
+          const awsError = originalError as { name: string; message?: string };
+          switch (awsError.name) {
+            case 'UserNotFoundException':
+              throw new AuthenticationError('User not found', 'USER_NOT_FOUND');
+            case 'TooManyRequestsException':
+              throw new AuthenticationError(
+                'Too many requests, please try again later',
+                'TOO_MANY_REQUESTS'
+              );
+          }
+        }
+      }
+
+      if (error && typeof error === 'object' && 'name' in error) {
+        const awsError = error as { name: string; message?: string };
+        switch (awsError.name) {
+          case 'UserNotFoundException':
+            throw new AuthenticationError('User not found', 'USER_NOT_FOUND');
+          case 'TooManyRequestsException':
+            throw new AuthenticationError(
+              'Too many requests, please try again later',
+              'TOO_MANY_REQUESTS'
+            );
+          default:
+            throw new AuthenticationError(
+              'Password reset request failed',
+              'FORGOT_PASSWORD_FAILED'
+            );
+        }
+      }
+
+      this.errorHandler.handleError(error, {
+        operation: 'forgotPassword',
+        email: validatedEmail,
+      });
+
+      throw new AuthenticationError('Password reset request failed', 'FORGOT_PASSWORD_FAILED');
+    }
+  }
+
+  /**
+   * Confirm forgot password with new password
+   *
+   * @param username - Username (email) used during forgot password
+   * @param code - Verification code from email
+   * @param newPassword - New password to set
+   * @throws {ValidationError} When input validation fails
+   * @throws {AuthenticationError} When password reset fails
+   */
+  public async confirmForgotPassword(
+    username: string,
+    code: string,
+    newPassword: string
+  ): Promise<void> {
+    const validatedUsername = validateUsername(username);
+    const validatedCode = validateVerificationCode(code);
+    const validatedPassword = validatePassword(newPassword);
+
+    try {
+      await this.retryHandler.execute(async () => {
+        const secretHash = this.computeSecretHashIfNeeded(validatedUsername);
+
+        const command = new ConfirmForgotPasswordCommand({
+          ClientId: this.config.clientId,
+          Username: validatedUsername,
+          ConfirmationCode: validatedCode,
+          Password: validatedPassword,
+          SecretHash: secretHash,
+        });
+
+        await this.cognitoClient.send(command);
+      }, 'confirm forgot password operation');
+    } catch (error) {
+      if (error instanceof CognitoAuthError) {
+        throw error;
+      }
+
       if (error instanceof NetworkError && 'originalError' in error) {
         const originalError = (error as NetworkError & { originalError: unknown }).originalError;
         if (originalError && typeof originalError === 'object' && 'name' in originalError) {
@@ -379,23 +473,14 @@ export class CognitoAuthManager {
               throw new AuthenticationError('Verification code has expired', 'CODE_EXPIRED');
             case 'UserNotFoundException':
               throw new AuthenticationError('User not found', 'USER_NOT_FOUND');
-            case 'NotAuthorizedException':
-              throw new AuthenticationError('User is already confirmed', 'USER_ALREADY_CONFIRMED');
-            case 'TooManyFailedAttemptsException':
-              throw new AuthenticationError('Too many failed attempts', 'TOO_MANY_ATTEMPTS');
-            case 'TooManyRequestsException':
-              throw new AuthenticationError(
-                'Too many requests, please try again later',
-                'TOO_MANY_REQUESTS'
-              );
+            case 'InvalidPasswordException':
+              throw new ValidationError('Password does not meet requirements', 'INVALID_PASSWORD');
           }
         }
       }
 
-      // Handle AWS SDK errors with enhanced error mapping
       if (error && typeof error === 'object' && 'name' in error) {
         const awsError = error as { name: string; message?: string };
-
         switch (awsError.name) {
           case 'CodeMismatchException':
             throw new AuthenticationError('Invalid verification code', 'INVALID_CODE');
@@ -403,33 +488,22 @@ export class CognitoAuthManager {
             throw new AuthenticationError('Verification code has expired', 'CODE_EXPIRED');
           case 'UserNotFoundException':
             throw new AuthenticationError('User not found', 'USER_NOT_FOUND');
-          case 'NotAuthorizedException':
-            throw new AuthenticationError('User is already confirmed', 'USER_ALREADY_CONFIRMED');
-          case 'TooManyFailedAttemptsException':
-            throw new AuthenticationError('Too many failed attempts', 'TOO_MANY_ATTEMPTS');
-          case 'TooManyRequestsException':
-            throw new AuthenticationError(
-              'Too many requests, please try again later',
-              'TOO_MANY_REQUESTS'
-            );
+          case 'InvalidPasswordException':
+            throw new ValidationError('Password does not meet requirements', 'INVALID_PASSWORD');
           default:
             throw new AuthenticationError(
-              'Confirmation failed due to service error',
-              'CONFIRMATION_FAILED'
+              'Password reset failed',
+              'CONFIRM_FORGOT_PASSWORD_FAILED'
             );
         }
       }
 
-      // Use error handler for production-safe error processing only for unexpected errors
       this.errorHandler.handleError(error, {
-        operation: 'confirmSignup',
-        username: validatedUsername, // Will be sanitized in logs
+        operation: 'confirmForgotPassword',
+        username: validatedUsername,
       });
 
-      throw new AuthenticationError(
-        'Confirmation failed due to unexpected error',
-        'CONFIRMATION_FAILED'
-      );
+      throw new AuthenticationError('Password reset failed', 'CONFIRM_FORGOT_PASSWORD_FAILED');
     }
   }
 
