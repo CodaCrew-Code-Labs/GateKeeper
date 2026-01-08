@@ -114,7 +114,7 @@ jobs:
       - name: Verify build outputs
         run: |
           # Check that all expected files exist
-          test -f dist/cjs/index.js
+          test -f dist/cjs/index.cjs
           test -f dist/esm/index.js
           test -f dist/types/index.d.ts
           
