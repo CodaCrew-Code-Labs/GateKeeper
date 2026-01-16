@@ -262,7 +262,8 @@ app.post('/auth/login', async (req, res) => {
         idToken: tokens.idToken,
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken
-      }
+      },
+      ...(tokens.preferredUsername && { preferredUsername: tokens.preferredUsername })
     });
   } catch (error) {
     console.error('Login error:', error);

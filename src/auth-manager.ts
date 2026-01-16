@@ -10,6 +10,7 @@ import {
   ConfirmForgotPasswordCommand,
   AdminGetUserCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
+import jwt from 'jsonwebtoken';
 import { CognitoConfig, AuthTokens, SignupResponse, AuthMiddlewareOptions } from './types.js';
 import { validateCognitoConfig } from './config.js';
 import { computeSecretHash } from './utils.js';
@@ -517,7 +518,10 @@ export class CognitoAuthManager {
    * @throws {ValidationError} When input validation fails
    * @throws {AuthenticationError} When login fails
    */
-  public async login(email: string, password: string): Promise<AuthTokens> {
+  public async login(
+    email: string,
+    password: string
+  ): Promise<AuthTokens & { preferredUsername?: string }> {
     // Comprehensive input validation and sanitization
     const validatedEmail = validateEmail(email);
     const validatedPassword = validatePassword(password);
@@ -557,10 +561,20 @@ export class CognitoAuthManager {
           );
         }
 
+        // Decode ID token to extract preferred_username
+        let preferredUsername: string | undefined;
+        try {
+          const decoded = jwt.decode(IdToken) as { preferred_username?: string } | null;
+          preferredUsername = decoded?.preferred_username;
+        } catch {
+          // If decoding fails, continue without preferred_username
+        }
+
         return {
           idToken: IdToken,
           accessToken: AccessToken,
           refreshToken: RefreshToken,
+          ...(preferredUsername && { preferredUsername }),
         };
       }, 'login operation');
 
