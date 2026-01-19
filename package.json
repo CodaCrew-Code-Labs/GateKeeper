@@ -67,7 +67,7 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
-    "@aws-sdk/client-cognito-identity-provider": "3.965.0",
+    "@aws-sdk/client-cognito-identity-provider": "3.971.0",
     "jsonwebtoken": "^9.0.0",
     "jwks-rsa": "^3.0.0",
     "zod": "^4.3.5"
